@@ -1,11 +1,10 @@
-module par_1dfft(x)
-    implicit none
+module fft_mod
     integer,parameter::dp=selected_real_kind(15,300)
     real(kind=dp),parameter::pi=3.141592653589793238460_dp
 contains
     recursive subroutine fft(x)!fft递归实现
         complex(kind=dp), dimension(:), intent(inout)::x
-        complex(kind=dp)::temp!
+        complex(kind=dp)::t
         integer::N!信号点数
         integer::i!循环变量
         complex(kind=dp), dimension(:), allocatable::even,odd!偶序列/奇序列
@@ -33,40 +32,14 @@ contains
         deallocate(odd)
         deallocate(even)
     end subroutine fft
-end module par_1dfft
+end module fft_mod
 
 program test
     use fft_mod
-    include"mpif.h"
-    implicit none
-    complex(kind=dp), dimension(8)::data
-    integer::i
-
-    integer::node,np,ierr
-    call MPI_INIT(ierr)
-    call MPI_COMM_RANK(MPI_COMM_WORLD,node,ierr)
-    call MPI_COMM_SIZE(MPI_COMM_WORLD,np,ierr)
-
-    ionode=(node==0)
-
-    if(Ionode)then
-        !读文件
-        data=(/1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0/)
-        n=size(data)
-        do i=1,np
-            call MPI_SEND(n,1,MPI_INTEGER,i,99,MPI_COMM_WORLD,ierr)
-        end do
-    else
-        call MPI_RECV(n,1,MPI_INTEGER,0,99,MPI_COMM_WORLD,ierr)
-    end if
+    complex(kind=dp), dimension(8) :: data = (/1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0/)
+    integer :: i
 
     call fft(data)
-
-    if(Ionode) then
-        do i=1,np
-            call MPI_RECV()
-        end do
-    end if
 
     do i=1,8
         write(*,'("(", F20.15, ",", F20.15, "i )")') data(i)
