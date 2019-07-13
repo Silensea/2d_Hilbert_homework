@@ -2,13 +2,12 @@ module fft_mod
     integer,parameter::dp=selected_real_kind(15,300)
     real(kind=dp),parameter::pi=3.141592653589793238460_dp
 contains
-    recursive subroutine fft(x)!fft递归实现
+    recursive subroutine fft(x,state)!fft递归实现
         complex(kind=dp), dimension(:), intent(inout)::x
         complex(kind=dp)::t
         integer::N!信号点数
         integer::i!循环变量
-        integer::omp_get_thread_num()
-        integer
+        integer::state
         complex(kind=dp), dimension(:), allocatable::even,odd!偶序列/奇序列
         N=size(x)
         if(N .le. 1) return!
@@ -22,6 +21,9 @@ contains
         call fft(even)
         ! combine
         ! 在这里实现并行
+        if(state.eq.1)
+            x=congj(x)
+        end if
         !$OMP PARALLEL
         !$OMP DO
         do i=1,N/2
@@ -37,15 +39,42 @@ contains
 end module fft_mod
 
 program test
-    use fft_mod
-!    complex(kind=dp), dimension(8) :: data = (/1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0/)
-!    integer :: i
-!
-!    call fft(data)
-!
-!    do i=1,8
-!        write(*,'("(", F20.15, ",", F20.15, "i )")') data(i)
-!    end do
-    complex(kind=dp),allocatable::data
-end program test
+    use fftmod
+    complex(kind=dp),allocatable::data(:,:)
+    complex(kind=dp)::temp
+    integer::M,N,i,j
+    temp=cmplx(-1.0_dp,0.0_dp)
+    !读文件
+    allocate(data(M,N))
+    !$OMP PARALLEL
+    !$OMP DO
+    do j=1,N
+        call fft(data(:,j),0)
+    end do
+    !$OMP END DO
+    !$OMP END PARALLEL
+    !$OMP PARALLEL
+    !$OMP DO
+    do i=1,M
+        call fft(data(i,:),0)
+    end do
+    !$OMP END DO
+    !$OMP END PARALLEL
+    !Hilbert
+    data=data*temp;
+    !$OMP PARALLEL
+    !$OMP DO
+    do j=1,N
+        call fft(data(:,j),1)
+    end do
+    !$OMP END DO
+    !$OMP END PARALLEL
+    !$OMP PARALLEL
+    !$OMP DO
+    do i=1,M
+        call fft(data(i,:),1)
+    end do
+    !$OMP END DO
+    !$OMP END PARALLEL
 
+end program test
