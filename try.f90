@@ -10,20 +10,21 @@ contains
         integer::state
         complex(kind=dp), dimension(:), allocatable::even,odd!偶序列/奇序列
         N=size(x)
-        if(N .le. 1) return!
+        if(N .le. 1) return
         allocate(odd((N+1)/2))
         allocate(even(N/2))
         ! divide
         odd =x(1:N:2)
         even=x(2:N:2)
         ! conquer
-        call fft(odd)
-        call fft(even)
+        call fft(odd,state)
+        call fft(even,state)
         ! combine
         ! 在这里实现并行
-        if(state.eq.1)
-            x=congj(x)
-        end if
+        if(state == 1)then
+            x=conjg(x)
+            end if
+        !end if
         !$OMP PARALLEL
         !$OMP DO
         do i=1,N/2
@@ -39,13 +40,21 @@ contains
 end module fft_mod
 
 program test
-    use fftmod
+    use fft_mod
     complex(kind=dp),allocatable::data(:,:)
     complex(kind=dp)::temp
     integer::M,N,i,j
     temp=cmplx(-1.0_dp,0.0_dp)
     !读文件
+    open(99,file="data.dat")
+    read(99,*)M,N
     allocate(data(M,N))
+    do j=1,N
+        do i=1,M
+            read(99,*)data(i,j)
+        end do
+    end do
+    !!!!!!!!!!!!!!!!!!FFT
     !$OMP PARALLEL
     !$OMP DO
     do j=1,N
@@ -60,8 +69,9 @@ program test
     end do
     !$OMP END DO
     !$OMP END PARALLEL
-    !Hilbert
+    !!!!!!!!!!!!!!!!!!!!Hilbert
     data=data*temp;
+    !!!!!!!!!!!!!!!!!!!!!IFFT
     !$OMP PARALLEL
     !$OMP DO
     do j=1,N
@@ -76,5 +86,10 @@ program test
     end do
     !$OMP END DO
     !$OMP END PARALLEL
-
+    open(98,file="data1.dat")
+    do j=1,N
+        do i=1,M
+            write(98,*)data(i,j)
+        end do
+    end do
 end program test
